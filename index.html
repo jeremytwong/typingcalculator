@@ -1,0 +1,291 @@
+<!DOCTYPE html> 
+<html lang="en-US">
+	<head>
+		<title>typing test</title>
+		<style>
+			body {
+				background-color: #AED6F1;
+			}
+
+			#myCanvas {
+
+				background-color: #FFFFFF;
+				padding-left: 0;
+				padding-right: 0;
+				margin-left: auto;
+				margin-right: auto;
+				display: block;
+				height: 15vh;
+				width: 60vw;
+
+			}
+
+			#myInput {
+				background-color: #FFFFFF;
+				font-size: 24pt;
+				width: 30vw;
+
+				display: inline-block;
+
+			}
+
+			#userInput {
+				text-align: center;
+			}
+
+			#myButton {
+				border-radius: 20px;
+				color: #000000;
+				display: inline-block;
+				width: 3rem;
+				height: 3rem;
+				font-size: 1.5em;
+
+			}
+
+			#mainRegion {
+				padding: 1rem;
+				background-color: #AED6F1;
+			}
+
+			#h1{
+				color: #000FFF;
+				text-align: center;
+				font-size: xx-large;
+			}
+
+			#h2 {
+				color: #000FFF;
+				text-align: center;
+				font-size: x-large;
+			}
+
+		</style>
+	</head>
+	<body>
+		<section id="mainRegion">
+			<h1 id="h1">start typing !</h1>
+			<h1 id="h2">0 wpm | 0 cpm</h1>
+			<h2> <canvas id="myCanvas"></canvas> </h2>
+
+
+			<div id="userInput">
+				<input type="text" id="myInput" oninput="startCalculations()" autofocus> <button id="myButton" type="button" onclick="reset()"> ♻</button> 
+			</div>
+			
+
+		<script type="text/javascript" src ="words.js"></script>
+		<script>
+			var totalWords = 0;
+			var totalCharacters = 0;
+			var currentIndex = 0;
+			var c = document.getElementById("myCanvas");
+			var ctx = c.getContext("2d");	
+			var firstWords = [];
+			var secondWords = [];
+			var calculationLoop;
+			var totalSeconds = 60; // # of seconds for test
+			var secondsElasped = 0;
+			startLoad();
+
+
+			function startLoad() {
+				let dpi = window.devicePixelRatio;
+				let style_height = +getComputedStyle(c).getPropertyValue("height").slice(0, -2);
+				let style_width = +getComputedStyle(c).getPropertyValue("width").slice(0, -2);
+				c.setAttribute('height', style_height * dpi);
+				c.setAttribute('width', style_width * dpi);
+				ctx.font = "4rem Times New Roman";
+				resetWords();
+			}
+
+			function newWords() {
+				words = [];
+				words.push(randWord());
+				return (loadWords(words));
+			}
+
+
+			function nextLine() {
+				firstWords = secondWords;
+				secondWords = newWords();
+
+			}
+
+
+			function printWords(sentence, x, y, color, words) {
+				if (sentence == "") {
+					for (var i = 0; i < words.length; i++) {
+						sentence += words[i] + " ";
+					}
+				} 
+
+				if (color == "green") {
+					ctx.fillStyle = "#56C147";
+				} else if (color == "black") {
+					ctx.fillStyle = "#000000";
+				} else {
+					ctx.fillStyle = "#FF0000";
+				}
+				ctx.fillText(sentence, x, y);
+				ctx.fillStyle = "#000000";
+			}
+
+			function splitIncorrectWords(words) {
+				var sentenceLeft = "";
+				height = document.getElementById("myCanvas").height;
+				width = document.getElementById("myCanvas").width * 0.01;
+
+				for (var i = 0; i < currentIndex; i++) {
+					sentenceLeft += words[i] + " ";
+				}
+
+				printWords(words[currentIndex], width + ctx.measureText(sentenceLeft).width, height * 0.33, "red", words);
+			}
+
+			function splitDoneWords(words, x, y) {
+
+				var sentenceLeft = "";
+				var sentenceRight = "";
+				for (var i = 0; i < currentIndex; i++) {
+					sentenceLeft += words[i] + " ";
+				}
+				for (var i = currentIndex; i < words.length; i++) {
+					sentenceRight += words[i] + " ";
+				}
+
+				printWords(sentenceLeft, x , y, "green", words);
+				printWords(sentenceRight, x + ctx.measureText(sentenceLeft).width, y, "black", words);
+			}
+
+			function loadWords(words) {
+				var maxLength = false;
+				var length = ctx.measureText(words[0]).width;
+				var randomWord;
+				while (!maxLength) {
+					randomWord = randWord();
+					if (ctx.measureText(randomWord).width + length < document.getElementById("myCanvas").width * 0.88) {
+						length += ctx.measureText(randomWord).width;
+						words.push(randomWord);	
+					} else {
+						maxLength = true;
+					}
+				}
+				return (words);
+			}
+
+			function startCalculations() {
+				if (calculationLoop == null) {
+					calculationLoop = setInterval(function() {
+
+						totalSeconds--;
+						secondsElasped++;
+						updateWPMCPM();
+						updateTimer();
+					}, 1000);
+				}
+
+				if (totalSeconds < 1) { 
+					clearInterval(calculationLoop);
+
+					document.getElementById('myInput').value = "";
+					document.getElementById('myInput').disabled = true;
+				}
+
+				checkCorrectWord(firstWords);
+			}
+
+			function checkCorrectWord(words) {
+				var text = document.getElementById('myInput').value;
+				if (text[text.length - 1] == " ") {
+					if (text.substring(0, text.length - 1) == words[currentIndex]) {
+						totalWords++;
+						totalCharacters += text.length - 1; // -1 to account for space
+						if (!(currentIndex == words.length - 1)) { // last word of the line
+							currentIndex++;
+						} else {
+							currentIndex = 0;
+							nextLine();
+						}
+						document.getElementById('myInput').value = ""; 
+						drawWords();
+					} else {
+						splitIncorrectWords(firstWords);
+					}
+				}
+			}
+
+
+			function resetWords() {
+				firstWords = newWords();
+				secondWords = newWords();
+				drawWords();
+			}
+
+			function drawWords() {
+				height = document.getElementById("myCanvas").height;
+				width = document.getElementById("myCanvas").width * 0.01;
+
+				ctx.clearRect(0, 0, document.getElementById("myCanvas").width, document.getElementById("myCanvas").height);
+
+				splitDoneWords(firstWords, width, height * 0.33);  // always first line because we move completed line off screen
+				printWords("", width, height * 0.66, "black", secondWords);
+
+			}
+
+			function updateTimer() {
+				var text;
+
+				if (totalSeconds == 1) {
+					text = totalSeconds + " second left";
+				} else {
+					text = totalSeconds + " seconds left";
+				}
+				document.getElementById('h1').innerText = text;
+			}
+
+
+			function updateWPMCPM() {
+				var wpm;
+				var cpm;
+
+				if (totalSeconds < 60) { // some leeway so that formula doesnt result in infinity
+					//wpm , cpm = speed/s * total time 
+					// 60 (seconds) needs to be changed according to totalSeconds
+					wpm = Math.round(totalWords / secondsElasped * 60);
+					cpm = Math.round(totalCharacters / secondsElasped * 60);
+					document.getElementById('h2').innerText = wpm + " wpm | " + cpm + " cpm";
+
+					// if person stops typing this will end it
+					if (totalSeconds < 1) {
+						clearInterval(calculationLoop);
+						document.getElementById('myInput').value = "";
+						document.getElementById('myInput').disabled = true;
+
+					}
+				}
+			}
+
+			function reset() {
+				currentIndex = 0;
+				totalSeconds = 60; // # of seconds for test
+				secondsElasped = 0;
+				totalCharacters = 0;
+				totalWords = 0;
+				clearInterval(calculationLoop);
+				calculationLoop = null;
+
+				document.getElementById('myInput').disabled = false;
+				document.getElementById('h1').innerText = "start typing";
+				document.getElementById('myInput').value = "";
+				document.getElementById('h2').innerText = " 0 wpm | 0 cpm";
+				resetWords();
+			}
+
+
+		</script>
+
+
+		</section>
+
+	</body>
